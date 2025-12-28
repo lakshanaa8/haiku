@@ -1,0 +1,14 @@
+{
+  "name": "medico-connect-database",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "migrate": "drizzle-kit migrate",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio",
+    "generate": "drizzle-kit generate"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.8"
+  }
+}

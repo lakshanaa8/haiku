@@ -1,0 +1,10 @@
+openai-whisper
+librosa
+soundfile
+noisereduce
+requests
+numpy
+torch
+# For GPU acceleration (uncomment if NVIDIA GPU available):
+# torch[cuda]
+# faster-whisper

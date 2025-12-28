@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Soft Pastel Teal Theme */
+  --font-body: 'Inter', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+
+  --background: 180 20% 98%;
+  --foreground: 190 40% 20%;
+
+  /* Teal Primary */
+  --primary: 175 45% 45%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Softer Teal Secondary */
+  --secondary: 175 30% 90%;
+  --secondary-foreground: 175 45% 30%;
+
+  --muted: 180 10% 94%;
+  --muted-foreground: 190 10% 50%;
+
+  --accent: 175 60% 85%;
+  --accent-foreground: 175 45% 25%;
+
+  --destructive: 0 70% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 175 20% 85%;
+  --input: 175 20% 85%;
+  --ring: 175 45% 45%;
+
+  --radius: 1rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight text-slate-800;
+  }
+}
+
+/* Glassmorphism utilities */
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/50 shadow-sm;
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur-sm border border-teal-100/50 shadow-lg shadow-teal-900/5 hover:shadow-xl hover:shadow-teal-900/10 transition-all duration-300;
+}
+
+/* Decorative Feathers */
+.feather {
+  position: relative;
+  overflow: hidden;
+}
+
+.feather::before {
+  content: '';
+  position: absolute;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* Feather animation */
+@keyframes float-feather {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+  }
+}
+
+.feather-animate {
+  animation: float-feather 3s ease-in-out infinite;
+}
+
+@keyframes float-feather-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(-5deg);
+  }
+}
+
+.feather-animate-slow {
+  animation: float-feather-slow 4s ease-in-out infinite;
+}
+
+/* Teal feather decorative shapes */
+.feather-top-left {
+  position: absolute;
+  top: -40px;
+  left: -40px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle at 30% 30%, rgba(175, 230, 223, 0.4), transparent);
+  border-radius: 50% 0% 60% 40%;
+  opacity: 0.6;
+  pointer-events: none;
+  animation: float-feather-slow 5s ease-in-out infinite;
+}
+
+.feather-top-right {
+  position: absolute;
+  top: -20px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle at 70% 70%, rgba(153, 216, 211, 0.35), transparent);
+  border-radius: 40% 60% 0% 50%;
+  opacity: 0.5;
+  pointer-events: none;
+  animation: float-feather 4s ease-in-out infinite;
+}
+
+.feather-bottom-left {
+  position: absolute;
+  bottom: -50px;
+  left: 10px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle at 40% 40%, rgba(175, 230, 223, 0.3), transparent);
+  border-radius: 50% 40% 60% 0%;
+  opacity: 0.4;
+  pointer-events: none;
+  animation: float-feather-slow 6s ease-in-out infinite;
+}
+
+.feather-accent {
+  display: inline-block;
+  width: 8px;
+  height: 20px;
+  background: linear-gradient(135deg, rgba(153, 216, 211, 0.8), rgba(175, 230, 223, 0.6));
+  border-radius: 50% 50% 0% 0%;
+  margin: 0 2px;
+  opacity: 0.7;
+}
+
+/* Subtle teal particles */
+.teal-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: rgba(153, 216, 211, 0.6);
+  border-radius: 50%;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+@keyframes drift {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(10px) translateY(-10px);
+  }
+}
+
+.teal-particle {
+  animation: drift 4s ease-in-out infinite;
+}
