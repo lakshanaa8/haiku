@@ -5,3 +5,5 @@ node_modules
 backend\.env
 .env
 backend/.env
+.env
+backend/.env
