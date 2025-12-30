@@ -1,19 +1,7 @@
-# Node modules
-node_modules/
-
-# Env files (Twilio keys, API keys, etc.)
+﻿.env
+backend\.env
+node_modules
+.env
+backend\.env
 .env
 backend/.env
-
-# Logs
-*.log
-
-# VS Code settings
-.vscode/
-
-# Build/output folders
-dist/
-build/
-
-# Misc
-.DS_Store
