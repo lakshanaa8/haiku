@@ -4,13 +4,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "./shared/routes";
 import { z } from "zod";
-import { initiatePatientCall, generateVoiceResponse, handleRecordingUrl, setBaseUrl } from "./twilio-service";
-import { 
-  generateGreetingTwiML, 
-  handleAvailabilityResponse, 
-  handleRecordingComplete, 
-  initiateEnhancedIVRCall 
-} from "./ivr-bot";
+import { initiatePatientCall, generateVoiceResponse, handleRecordingUrl, setBaseUrl, generateGreetingTwiML, handleAvailabilityResponse, handleRecordingComplete, initiateEnhancedIVRCall } from "./twilio-service";
 
 import { speechToText } from "./audio-processor";
 import { classifyIntent } from "./intent-classifier";
@@ -26,58 +20,83 @@ export async function registerRoutes(
   // Enhanced IVR Bot Endpoints
 
   app.post('/api/twilio/ivr-greeting', (req, res) => {
-    const { callId = '0', healthIssue = 'general' } = req.query;
-    console.log(`[IVR] 📞 Enhanced IVR greeting - callId: ${callId}, healthIssue: ${healthIssue}`);
-    
-    res.set('Content-Type', 'text/xml');
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-    const twiml = generateGreetingTwiML(parseInt(callId as string), healthIssue as string, baseUrl);
-    
-    console.log('[IVR] 🎤 Enhanced greeting TwiML generated');
-    res.send(twiml);
+    try {
+      const { callId = '0', healthIssue = 'general' } = req.query;
+      console.log(`[IVR] 📞 Enhanced IVR greeting - callId: ${callId}, healthIssue: ${healthIssue}`);
+      
+      res.set('Content-Type', 'text/xml');
+      const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+      const twiml = generateGreetingTwiML(parseInt(callId as string), healthIssue as string, baseUrl);
+      
+      console.log('[IVR] 🎤 Enhanced greeting TwiML generated');
+      res.send(twiml);
+    } catch (error) {
+      console.error('[IVR] Error in ivr-greeting:', error);
+      res.set('Content-Type', 'text/xml');
+      res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Aditi-Neural">We are sorry, an application error has occurred. Goodbye.</Say><Hangup/></Response>`);
+    }
   });
   
   app.post('/api/twilio/availability', (req, res) => {
-    const { callId, healthIssue } = req.query;
-    const { SpeechResult, Digits } = req.body;
-    
-    // Handle both speech and keypress input
-    const userInput = SpeechResult || (Digits === '1' ? 'yes' : Digits === '2' ? 'no' : 'yes');
+    try {
+      const { callId, healthIssue } = req.query;
+      const { SpeechResult, Digits } = req.body;
+      
+      // Handle both speech and keypress input
+      const userInput = SpeechResult || (Digits === '1' ? 'yes' : Digits === '2' ? 'no' : 'yes');
 
-    console.log(`[IVR] 🗣️ Availability response - callId: ${callId}, speech: "${SpeechResult}", digits: "${Digits}", input: "${userInput}"`);
-    
-    res.set('Content-Type', 'text/xml');
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-    const twiml = handleAvailabilityResponse(userInput, parseInt(callId as string), healthIssue as string, baseUrl);
-    
-    res.send(twiml);
+      console.log(`[IVR] 🗣️ Availability response - callId: ${callId}, speech: "${SpeechResult}", digits: "${Digits}", input: "${userInput}"`);
+      
+      res.set('Content-Type', 'text/xml');
+      const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+      const twiml = handleAvailabilityResponse(userInput, parseInt(callId as string), healthIssue as string, baseUrl);
+      
+      res.send(twiml);
+    } catch (error) {
+      console.error('[IVR] Error in availability:', error);
+      res.set('Content-Type', 'text/xml');
+      res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Aditi-Neural">We are sorry, an application error has occurred. Goodbye.</Say><Hangup/></Response>`);
+    }
   });
   
   app.post('/api/twilio/record-complete', async (req, res) => {
-    const { callId, healthIssue } = req.query;
-    const { RecordingUrl, RecordingDuration } = req.body;
+    try {
+      const { callId, healthIssue } = req.query;
+      const { RecordingUrl, RecordingDuration } = req.body;
 
-    console.log(`[IVR] 🎤 Recording complete - callId: ${callId}, URL: ${RecordingUrl}`);
-    
-    res.set('Content-Type', 'text/xml');
-    const twiml = handleRecordingComplete(parseInt(callId as string), RecordingUrl, parseInt(RecordingDuration) || 0);
+      console.log(`[IVR] 🎤 Recording complete - callId: ${callId}, URL: ${RecordingUrl}, Duration: ${RecordingDuration}s`);
+      console.log(`[IVR] 📋 Full request body:`, req.body);
+      
+      res.set('Content-Type', 'text/xml');
+      const twiml = handleRecordingComplete(parseInt(callId as string), RecordingUrl, parseInt(RecordingDuration) || 0);
 
-    if (RecordingUrl && callId) {
-      handleRecordingUrl(parseInt(callId as string), RecordingUrl, parseInt(RecordingDuration) || 0)
-        .catch(err => console.error('[IVR] Background recording processing failed:', err));
+      if (RecordingUrl && callId) {
+        handleRecordingUrl(parseInt(callId as string), RecordingUrl, parseInt(RecordingDuration) || 0)
+          .catch(err => console.error('[IVR] Background recording processing failed:', err));
+      }
+      
+      res.send(twiml);
+    } catch (error) {
+      console.error('[IVR] Error in record-complete:', error);
+      res.set('Content-Type', 'text/xml');
+      res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Aditi-Neural">Thank you for your call. Goodbye.</Say><Hangup/></Response>`);
     }
-    
-    res.send(twiml);
   });
 
   app.post('/voice', (req, res) => {
-    const { callId = '0', healthIssue = 'general' } = req.query;
-    console.log(`[Twilio] 📞 Legacy voice endpoint - redirecting to enhanced IVR`);
+    try {
+      const { callId = '0', healthIssue = 'general' } = req.query;
+      console.log(`[Twilio] 📞 Legacy voice endpoint - redirecting to enhanced IVR`);
 
-    res.set('Content-Type', 'text/xml');
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-    const twiml = generateGreetingTwiML(parseInt(callId as string), healthIssue as string, baseUrl);
-    res.send(twiml);
+      res.set('Content-Type', 'text/xml');
+      const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+      const twiml = generateGreetingTwiML(parseInt(callId as string), healthIssue as string, baseUrl);
+      res.send(twiml);
+    } catch (error) {
+      console.error('[IVR] Error in legacy voice endpoint:', error);
+      res.set('Content-Type', 'text/xml');
+      res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Aditi-Neural">We are sorry, an application error has occurred. Goodbye.</Say><Hangup/></Response>`);
+    }
   });
 
   app.get('/voice', (req, res) => {
@@ -116,7 +135,7 @@ export async function registerRoutes(
       console.log(`[Routes] Patient created with ID: ${patient.id}`);
 
       try {
-        const baseUrl = process.env.BASE_URL || process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 5000}`;
+        const baseUrl = process.env.BASE_URL || process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`;
         const callResult = await initiateEnhancedIVRCall(patient.id, patient.phone, input.healthIssue, baseUrl);
         console.log(`[Routes] ✅ Enhanced IVR call initiated successfully for patient ${patient.id}, call ID: ${callResult.id}`);
       } catch (callError) {
@@ -144,39 +163,8 @@ export async function registerRoutes(
     res.send(twiml.toString());
   });
 
-  app.post('/api/twilio/recording-status', async (req, res) => {
-    try {
-      const { callId } = req.query;
-      const { RecordingUrl, RecordingDuration } = req.body;
-
-      if (RecordingUrl && callId) {
-        await handleRecordingUrl(parseInt(callId as string), RecordingUrl, parseInt(RecordingDuration) || 0);
-      }
-
-      res.status(200).json({ success: true });
-    } catch (error) {
-      console.error('[Twilio] Error in recording status webhook:', error);
-      res.status(200).json({ success: true });
-    }
-  });
-
-  app.post('/api/twilio/handle-recording', async (req, res) => {
-    try {
-      const { callId } = req.query;
-      const { RecordingUrl, RecordingDuration } = req.body;
-
-      if (RecordingUrl && callId) {
-        await handleRecordingUrl(parseInt(callId as string), RecordingUrl, parseInt(RecordingDuration) || 0);
-      }
-
-      res.type('text/xml');
-      res.send('<Response><Hangup/></Response>');
-    } catch (error) {
-      console.error('[Twilio] ❌ Error handling recording:', error);
-      res.type('text/xml');
-      res.send('<Response><Hangup/></Response>');
-    }
-  });
+  // Legacy recording endpoints removed to prevent conflicts
+  // Only /api/twilio/record-complete should handle TwiML record actions
 
   app.get(api.patients.list.path, async (req, res) => {
     const patients = await storage.getPatients();

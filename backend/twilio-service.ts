@@ -232,7 +232,8 @@ export async function initiatePatientCall(patientId: number, phoneNumber: string
       from: twilioPhoneNumber,
       to: formattedPhone,
       url: `${cachedBaseUrl}/voice?callId=${callRecord.id}&healthIssue=${encodeURIComponent(healthIssue)}`,
-      // Remove record: true to prevent full call recording
+      record: false, // Explicitly disable call-level recording
+      recordingStatusCallback: undefined // No recording callbacks
     });
 
     await storage.updateCall(callRecord.id, { status: 'in_progress' });
