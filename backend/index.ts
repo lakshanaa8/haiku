@@ -1,4 +1,9 @@
 import "dotenv/config";
+import { config } from "dotenv";
+import path from "path";
+
+// Load .env from parent directory
+config({ path: path.resolve(process.cwd(), '..', '.env') });
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";

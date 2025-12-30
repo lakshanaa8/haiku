@@ -124,16 +124,17 @@ export function handleAvailabilityResponse(
     return twiml.toString();
   }
 
-  // Patient said YES
-  twiml.say(IVR_MESSAGES.availableResponse, { voice: IVR_CONFIG.voice });
+  twiml.say(IVR_MESSAGES.availableResponse, { 
+    voice: IVR_CONFIG.voice 
+  });
+
   twiml.record({
-    timeout: 1,
-    maxLength: IVR_CONFIG.recordingMaxLength,
     playBeep: true,
-    action: `${baseUrl}/api/twilio/record-complete?callId=${callId}&healthIssue=${encodeURIComponent(
-      healthIssue
-    )}`,
-    method: 'POST',
+    maxLength: 15,
+    timeout: 5,
+    finishOnKey: '#',
+    action: `${baseUrl}/api/twilio/record-complete?callId=${callId}&healthIssue=${encodeURIComponent(healthIssue)}`,
+    method: 'POST'
   });
 
   return twiml.toString();
@@ -172,9 +173,8 @@ export async function initiateEnhancedIVRCall(
         url: `${baseUrl}/api/twilio/ivr-greeting?callId=${callRecord.id}&healthIssue=${encodeURIComponent(
           healthIssue
         )}`,
-        record: true,
-        recordingStatusCallback: `${baseUrl}/api/twilio/recording-status?callId=${callRecord.id}`,
-        recordingStatusCallbackMethod: 'POST',
+        record: false,
+        recordingStatusCallback: undefined, // ✅ No recording callbacks
       });
 
       await storage.updateCall(callRecord.id, { status: 'in_progress' });
@@ -232,7 +232,7 @@ export async function initiatePatientCall(patientId: number, phoneNumber: string
       from: twilioPhoneNumber,
       to: formattedPhone,
       url: `${cachedBaseUrl}/voice?callId=${callRecord.id}&healthIssue=${encodeURIComponent(healthIssue)}`,
-      record: true,
+      // Remove record: true to prevent full call recording
     });
 
     await storage.updateCall(callRecord.id, { status: 'in_progress' });

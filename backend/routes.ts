@@ -2,7 +2,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
-import { api } from "@shared/routes";
+import { api } from "./shared/routes";
 import { z } from "zod";
 import { initiatePatientCall, generateVoiceResponse, handleRecordingUrl, setBaseUrl } from "./twilio-service";
 import { 
@@ -12,13 +12,11 @@ import {
   initiateEnhancedIVRCall 
 } from "./ivr-bot";
 
-// Initialize Anthropic (Replit Integration)
+import { speechToText } from "./audio-processor";
+import { classifyIntent } from "./intent-classifier";
 import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || 'dummy-key-replit-ai-handles-this',
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
+
 
 export async function registerRoutes(
   httpServer: Server,
@@ -32,7 +30,7 @@ export async function registerRoutes(
     console.log(`[IVR] 📞 Enhanced IVR greeting - callId: ${callId}, healthIssue: ${healthIssue}`);
     
     res.set('Content-Type', 'text/xml');
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
     const twiml = generateGreetingTwiML(parseInt(callId as string), healthIssue as string, baseUrl);
     
     console.log('[IVR] 🎤 Enhanced greeting TwiML generated');
@@ -41,13 +39,16 @@ export async function registerRoutes(
   
   app.post('/api/twilio/availability', (req, res) => {
     const { callId, healthIssue } = req.query;
-    const { SpeechResult } = req.body;
+    const { SpeechResult, Digits } = req.body;
+    
+    // Handle both speech and keypress input
+    const userInput = SpeechResult || (Digits === '1' ? 'yes' : Digits === '2' ? 'no' : 'yes');
 
-    console.log(`[IVR] 🗣️ Availability response - callId: ${callId}, speech: "${SpeechResult}"`);
+    console.log(`[IVR] 🗣️ Availability response - callId: ${callId}, speech: "${SpeechResult}", digits: "${Digits}", input: "${userInput}"`);
     
     res.set('Content-Type', 'text/xml');
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
-    const twiml = handleAvailabilityResponse(SpeechResult, parseInt(callId as string), healthIssue as string, baseUrl);
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+    const twiml = handleAvailabilityResponse(userInput, parseInt(callId as string), healthIssue as string, baseUrl);
     
     res.send(twiml);
   });
@@ -74,7 +75,7 @@ export async function registerRoutes(
     console.log(`[Twilio] 📞 Legacy voice endpoint - redirecting to enhanced IVR`);
 
     res.set('Content-Type', 'text/xml');
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
     const twiml = generateGreetingTwiML(parseInt(callId as string), healthIssue as string, baseUrl);
     res.send(twiml);
   });
@@ -115,7 +116,7 @@ export async function registerRoutes(
       console.log(`[Routes] Patient created with ID: ${patient.id}`);
 
       try {
-        const baseUrl = process.env.BASE_URL || process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`;
+        const baseUrl = process.env.BASE_URL || process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 5000}`;
         const callResult = await initiateEnhancedIVRCall(patient.id, patient.phone, input.healthIssue, baseUrl);
         console.log(`[Routes] ✅ Enhanced IVR call initiated successfully for patient ${patient.id}, call ID: ${callResult.id}`);
       } catch (callError) {

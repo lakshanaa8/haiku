@@ -57,16 +57,17 @@ export function generateGreetingTwiML(callId: number, healthIssue: string, baseU
     voice: IVR_CONFIG.voice
   });
 
-  // Gather availability response (speech input)
+  // Gather availability response (both speech and keypress)
   const gather = twimlResponse.gather({
-    input: ['speech'],
+    input: ['speech', 'dtmf'],
     action: `${baseUrl}/api/twilio/availability?callId=${callId}&healthIssue=${encodeURIComponent(healthIssue)}`,
     method: 'POST',
     timeout: IVR_CONFIG.gatherTimeout,
-    speechTimeout: 'auto'
+    speechTimeout: 'auto',
+    numDigits: 1
   });
 
-  gather.say(IVR_MESSAGES.availabilityPrompt, {
+  gather.say('Please say yes or no, or press 1 for yes, 2 for no.', {
     voice: IVR_CONFIG.voice
   });
 
@@ -81,7 +82,7 @@ export function generateGreetingTwiML(callId: number, healthIssue: string, baseU
 }
 
 /**
- * Handle availability response (YES/NO)
+ * Handle availability response (YES/NO or 1/2)
  */
 export function handleAvailabilityResponse(speechResult: string, callId: number, healthIssue: string, baseUrl: string): string {
   const twimlResponse = new VoiceResponse();
@@ -89,8 +90,8 @@ export function handleAvailabilityResponse(speechResult: string, callId: number,
 
   console.log(`[IVR] Availability response for call ${callId}: "${speechResult}"`);
 
-  // Check if user said NO
-  if (speech.includes('no') || speech.includes('not available') || speech.includes('busy')) {
+  // Check if user said NO or pressed 2
+  if (speech.includes('no') || speech.includes('not available') || speech.includes('busy') || speech === '2') {
     console.log(`[IVR] Patient not available for call ${callId}`);
     
     twimlResponse.say(IVR_MESSAGES.notAvailableResponse, {
@@ -108,18 +109,21 @@ export function handleAvailabilityResponse(speechResult: string, callId: number,
     return twimlResponse.toString();
   }
 
-  // User said YES or anything else (assume available)
+  // User said YES, pressed 1, or anything else (assume available)
   console.log(`[IVR] Patient available for call ${callId}, proceeding to record concern`);
   
   twimlResponse.say(IVR_MESSAGES.availableResponse, {
     voice: IVR_CONFIG.voice
   });
 
-  // Record patient's health concern (15 seconds max)
+  // Ensure beep finishes before recording starts
+  twimlResponse.pause({ length: 1 });
+
   twimlResponse.record({
-    timeout: 1,
-    maxLength: IVR_CONFIG.recordingMaxLength,
     playBeep: true,
+    maxLength: 15,
+    timeout: 5,
+    finishOnKey: '#',
     action: `${baseUrl}/api/twilio/record-complete?callId=${callId}&healthIssue=${encodeURIComponent(healthIssue)}`,
     method: 'POST'
   });
@@ -139,6 +143,9 @@ export function handleRecordingComplete(callId: number, recordingUrl: string, du
   twimlResponse.say(IVR_MESSAGES.thankYouResponse, {
     voice: IVR_CONFIG.voice
   });
+
+  // Give patient time to process the message
+  twimlResponse.pause({ length: 2 });
 
   twimlResponse.hangup();
 
@@ -171,9 +178,8 @@ export async function initiateEnhancedIVRCall(patientId: number, phoneNumber: st
         from: twilioPhoneNumber,
         to: formattedPhone,
         url: `${baseUrl}/api/twilio/ivr-greeting?callId=${callRecord.id}&healthIssue=${encodeURIComponent(healthIssue)}`,
-        record: true,
-        recordingStatusCallback: `${baseUrl}/api/twilio/recording-status?callId=${callRecord.id}`,
-        recordingStatusCallbackMethod: 'POST',
+        record: false,
+        recordingStatusCallback: undefined, // ✅ No recording callbacks
       });
 
       console.log(`[IVR] Enhanced IVR call initiated: ${call.sid}`);
